@@ -1,0 +1,19 @@
+{
+  "name": "kafeibot",
+  "version": "1.0.0",
+  "description": "Multipurpose exclusive bot.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discord.js",
+    "discord-bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^13.0.0",
+    "dotenv": "^10.0.0"
+  }
+}
