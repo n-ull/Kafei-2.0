@@ -1,15 +1,11 @@
 Version 1.9:
-	Sistema:
-		☐ Command Handler
-		☐ Event Handler
-		☐ DB Handler
-
 	Nuevas funciones:
 		☐ Generador de Profile Cards
 		☐ Sistema de Medallas
 		☐ Ship Command (Con generador de imagenes)	 
 		☐ Loteria
 		☐ Jackpot
+		✔ Blackjack (Remake) @done(21-08-31 01:13)
 		☐ Ruleta (Mejoras Pendientes)
 		☐ Crash
 		☐ RPS
@@ -22,4 +18,14 @@ Version 1.9:
 			☐ Buy Clan
 			☐ Top Clans
 			☐ Info Clan
+		Moderation:
+			☐ Mute
+			☐ Unmute
+			☐ Ban
+			☐ Kick
+			☐ Check
+		Administration:
+			☐ Lockdown
+			☐ Slowdown
+			☐ Config (Varias opciones de configuración, como blacklist de comandos, de exp, etc...)
 		☐ Diamantes
