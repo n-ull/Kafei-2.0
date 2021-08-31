@@ -106,7 +106,7 @@ class Blackjack {
 		} else if (dealerend > 21 || playerend > dealerend) {
 			this.result = 'Win'
 		} else if (dealerend == 21 && this.dealercards.length == 2) {
-			this.result = 'Lose' // Lose
+			this.result = 'Lose'
 		} else if (dealerend == playerend) {
 			this.result = 'Tie'
 		} else {
@@ -116,15 +116,8 @@ class Blackjack {
 	}
 }
 
-// let black = new Blackjack('Paulito');
-// for (let index = 0; index < 54; index++) {
-// 	black.pullCard(0);
-// }
-// console.log(black.deck)
+// Función Play, encargada del envío de mensajes y el uso de botones.
 
-/*
-Función Play, encargada del envío de mensajes y el uso de botones.
-*/
 module.exports = async (message) => {
 	let player = message.author;
 
