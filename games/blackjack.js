@@ -118,7 +118,7 @@ class Blackjack {
 
 // Función Play, encargada del envío de mensajes y el uso de botones.
 
-module.exports = async (message) => {
+module.exports.play = async (message) => {
 	let player = message.author;
 
 	if (games.has(player.id)) {
@@ -131,7 +131,7 @@ module.exports = async (message) => {
 
 	try {
 		const filter = (interaction) => interaction.user.id === player.id;
-		bj.deal(); 
+		bj.deal();
 
 		function updateEmbed(options, disabled = false) {
 			let updated = new MessageEmbed()

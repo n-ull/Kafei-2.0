@@ -7,7 +7,6 @@ const reqString = {
 
 const userSchema = new mongoose.Schema({
     userId: reqString,
-    clans: [String],
     money: {
         type: Number,
         default: 0,

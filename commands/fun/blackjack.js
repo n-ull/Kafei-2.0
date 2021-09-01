@@ -1,4 +1,4 @@
-const play = require('../../games/blackjack');
+const { play } = require('../../games/blackjack');
 
 module.exports = {
 	name: 'blackjack',
@@ -8,7 +8,6 @@ module.exports = {
 	category: 'Games',
 	guildOnly: true,
 	callback: async ({ message, args, client }) => {
-		let game = await play(message)
-		console.log(game)
+		await play(message)
 	}
 }

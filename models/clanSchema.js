@@ -7,7 +7,11 @@ const reqString = {
 
 const clansSchema = new mongoose.Schema({
     guildId: reqString,
-    clanId: reqString,
+    clanName: {
+        type: String,
+        required: true,
+        unique: true
+    },
     roleId: reqString,
     ownerId: reqString,
     background: {
