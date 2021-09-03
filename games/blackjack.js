@@ -244,21 +244,17 @@ module.exports.play = async (message) => {
 				bj.pullCard(1);
 				if (bj.score(bj.playervalues).endscore >= 21) {
 					collector.stop();
-					bj.stand()
 					return updateEmbed(Row, true)
 				}
 				updateEmbed(Row)
 			} else {
 				collector.stop();
-				bj.stand();
 				updateEmbed(Row, true)
 			}
 		});
 
 		collector.on('end', (c, r) => {
-			if (r == 'time') {
-				bj.stand();
-			}
+			bj.stand()
 			games.delete(player.id)
 		})
 	} catch (error) {

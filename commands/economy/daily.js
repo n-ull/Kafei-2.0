@@ -1,0 +1,1 @@
+// daily (comando de 24hs que entrega un bono diario)

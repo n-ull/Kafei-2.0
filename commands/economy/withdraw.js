@@ -1,0 +1,1 @@
+// withdraw cantidad/all | retira tu dinero del banco

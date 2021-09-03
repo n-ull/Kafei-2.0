@@ -47,9 +47,7 @@ module.exports.create = async (guild, member, info) => {
 		roleId: clan.id,
 		clanName: clan.name,
 		ownerId: member.id,
-	})
-
-	newClan.save(console.log(`Clan comprado por ${member.displayName} - ID: ${member.id}`))
+	}).save(console.log(`Clan comprado por ${member.displayName} - ID: ${member.id}`))
 
 	// give the role to the owner and delete the old clan from the roles of the owner.
 	const allClans = await clanSchema.aggregate([
@@ -70,8 +68,19 @@ module.exports.create = async (guild, member, info) => {
 	member.roles.add(clan, "Nuevo clan añadido");
 }
 
-module.exports.delete = async (clan) => {
-	
+module.exports.hasClan = async (userId, guildId) => {
+	let result = await clanSchema.findOne({
+		guildId: guildId,
+		ownerId: userId
+	});
+
+	let hasClan = false
+
+	if(result){
+		hasClan = true
+	}
+
+	return hasClan
 }
 
 

@@ -1,9 +1,18 @@
 const userSchema = require('../models/userSchema');
 
-module.exports.checkBal = async(userID) => {
-	const user = await userSchema.findOne(
+module.exports.checkBal = async (userID) => {
+    const user = await userSchema.findOneAndUpdate(
         {
-            _id: userID
+            userId: userID
+        },
+        {
+            $setOnInsert: {
+                userId: userID,
+                money: 0
+            }
+        },
+        {
+            upsert: true
         })
 
     let wallet = !user ? 0 : user.money;
@@ -12,7 +21,7 @@ module.exports.checkBal = async(userID) => {
 
 module.exports.addBal = async (userID, moneyToAdd) => {
     const user = await userSchema.updateOne({
-        _id: userID
+        userId: userID
     }, {
         $inc: { money: moneyToAdd }
     },
@@ -21,7 +30,7 @@ module.exports.addBal = async (userID, moneyToAdd) => {
 
 module.exports.remBal = async (userID, moneyToRem) => {
     const user = await userSchema.updateOne({
-        _id: userID
+        userId: userID
     }, {
         $inc: { money: -moneyToRem }
     })

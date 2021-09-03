@@ -1,0 +1,1 @@
+// choice cosa 1; cosa 2; cosa 3 | selecciona entre algun argumento separado en punto y coma.

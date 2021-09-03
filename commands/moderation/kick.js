@@ -1,0 +1,1 @@
+// kick @user/id razón | pateale la cara a un usuario.
