@@ -1,8 +1,28 @@
-// say normal; Lo que quieres que el bot diga | normal indica el modo normal, dirá una cosa normalmente
-//
-// say reply @message-id; Lo que quieres que responda | Esto responderá a un mensaje de un usuario en x canal:
-// *					como indicación el canal dado debe ser el mismo en el que se mandó el comando.
-// *					al usarse el comando, se gasta del inventario del usaurio, este comando se comprará 
-// *					con la economia del bot. 
-// *					(de esta forma evitamos muchos pendejos usandoló)
+// Falta agregar permisos y limitar el comando.
+module.exports = {
+	name: 'say',
+	description: 'Haz que el bot diga algo.',
+	category: 'Fun',
+	expectedArgs: '< normal/reply > *message-id*; < texto >',
+	callback: async ({ message, args, text }) => {
+		// modo normal
+		if (args[ 0 ].slice(0, 6) == 'normal') {
+			let say = text.split('; ');
+			await message.channel.send(say[ 1 ]);
+			message.delete();
+		}
 
+		// modo respuesta
+		if (args[ 0 ] == 'reply') {
+			try {
+				let messageId = args[ 1 ].replace(/;/, '');
+				let toreply = await message.channel.messages.fetch(messageId);
+				let say = text.split('; ');
+				toreply.reply(say[ 1 ])
+				message.delete();
+			} catch (e) {
+				message.channel.send('No encontré ese mensaje en este canal...')
+			}
+		}
+	}
+}

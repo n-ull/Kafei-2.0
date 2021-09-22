@@ -253,9 +253,11 @@ module.exports.play = async (message) => {
 			}
 		});
 
-		collector.on('end', (c, r) => {
-			bj.stand()
-			games.delete(player.id)
+		collector.on('end', async (c, r) => {
+			console.log('Collector finalizado');
+			await bj.stand();
+			updateEmbed(Row, true);
+			games.delete(player.id);
 		})
 	} catch (error) {
 		console.log(error)

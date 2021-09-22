@@ -3,18 +3,18 @@ const clanSchema = require('../models/clanSchema');
 module.exports.join = async (member, guild) => {
 	const idGroup = await clanSchema.aggregate([
 		{
-		  '$match': {
-			'guildId': guild
-		  }
+			'$match': {
+				'guildId': guild
+			}
 		}, {
-		  '$group': {
-			'_id': '$roleId'
-		  }
+			'$group': {
+				'_id': '$roleId'
+			}
 		}
-	  ]);
+	]);
 
 	// Makes an array with the role ids
-	const result = idGroup.map(({ _id }) => _id);
+	const result = idGroup.map(({ _id }) => _id).sort((a, b) => a - b);
 
 	// Calcaulates the correct index for the user id
 	const selection = member.id % result.length;
@@ -25,12 +25,19 @@ module.exports.join = async (member, guild) => {
 	})
 
 	// Check if you own a clan
-	if (guildClans){
-		console.log("Ya eres dueño de un clan");
+	if (guildClans) {
+		console.log("El usuario ya es dueño de un clan");
 		return
 	}
 
-	member.roles.add(result[ selection ]) // add the role
+	if (member.roles.cache.has(result[ selection ])) return 'Estás en el clan que perteneces';
+
+	member.roles.remove(result, 'Clan Removed').then(
+		() => {
+			member.roles.add(result[ selection ], 'Clan Added');
+		}
+	); // add the role
+	return 'Ya tienes tu nuevo clan, imbécil'
 }
 
 module.exports.create = async (guild, member, info) => {
@@ -76,7 +83,7 @@ module.exports.hasClan = async (userId, guildId) => {
 
 	let hasClan = false
 
-	if(result){
+	if (result) {
 		hasClan = true
 	}
 

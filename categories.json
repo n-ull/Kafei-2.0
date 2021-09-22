@@ -1,0 +1,28 @@
+{
+	"Categorias": [
+		{
+			"name": "Fun",
+			"description": "Lo gay no se quita...",
+			"emoji": "🎈",
+			"id": "Fun"
+		},
+		{
+			"name": "Clanes",
+			"description": "¡Que empiece la guerra!",
+			"emoji": "🛡",
+			"id": "Clans"
+		},
+		{
+			"name": "Economia",
+			"description": "Hora de derrochar tu dinero, regalame un poco.",
+			"emoji": "💸",
+			"id": "Economy"
+		},
+		{
+			"name": "Juegos",
+			"description": "Para derrochar tus Mons.",
+			"emoji": "🎰",
+			"id": "Games"
+		}
+	]
+}
