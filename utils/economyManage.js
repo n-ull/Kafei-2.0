@@ -8,15 +8,16 @@ module.exports.checkBal = async (userID) => {
         {
             $setOnInsert: {
                 userId: userID,
-                money: 0
+                money: 0,
+                bank: 0
             }
         },
         {
             upsert: true
         })
 
-    let wallet = !user ? 0 : user.money;
-    return wallet
+    let balance = !user ? 0 : {wallet: user.money, bank: user.bank};
+    return balance
 }
 
 module.exports.addBal = async (userID, moneyToAdd) => {
@@ -33,5 +34,27 @@ module.exports.remBal = async (userID, moneyToRem) => {
         userId: userID
     }, {
         $inc: { money: -moneyToRem }
+    })
+}
+
+module.exports.deposit = async (userID, moneyToDep) => {
+    const user = await userSchema.updateOne({
+        userId: userID
+    }, {
+        $inc: {
+            money: -moneyToDep,
+            bank: moneyToDep
+        }
+    })
+}
+
+module.exports.withdraw = async (userID, moneyToWit) => {
+    const user = await userSchema.updateOne({
+        userId: userID
+    }, {
+        $inc: {
+            money: moneyToWit,
+            bank: -moneyToWit
+        }
     })
 }

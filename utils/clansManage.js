@@ -1,6 +1,8 @@
 const clanSchema = require('../models/clanSchema');
 
-module.exports.join = async (member, guild) => {
+module.exports = { join, create, hasClan, forceJoin };
+
+async function join(member, guild) {
 	const idGroup = await clanSchema.aggregate([
 		{
 			'$match': {
@@ -24,14 +26,12 @@ module.exports.join = async (member, guild) => {
 		ownerId: member.id
 	})
 
-	// Check if you own a clan
-	if (guildClans) {
-		console.log("El usuario ya es dueño de un clan");
-		return
-	}
+	// Error Handler
+	if (guildClans) throw 'Ya eres dueño de un clan.';
+	if (member.roles.cache.has(result[ selection ])) throw 'Estás en el clan que perteneces';
+	if (!result.length == 0) throw 'No existe ningún clan al que unirse.';
 
-	if (member.roles.cache.has(result[ selection ])) return 'Estás en el clan que perteneces';
-
+	// Give clan
 	member.roles.remove(result, 'Clan Removed').then(
 		() => {
 			member.roles.add(result[ selection ], 'Clan Added');
@@ -40,10 +40,10 @@ module.exports.join = async (member, guild) => {
 	return 'Ya tienes tu nuevo clan, imbécil'
 }
 
-module.exports.create = async (guild, member, info) => {
+async function create(guild, member, info) {
 	// create the clan
 	let clan = await guild.roles.create({
-		name: info.clanName,
+		name: `「${info.emoji}」${info.name}`,
 		color: info.color,
 		reason: `Clan comprado por ${member.displayName} - ID: ${member.id}`,
 	})
@@ -75,7 +75,7 @@ module.exports.create = async (guild, member, info) => {
 	member.roles.add(clan, "Nuevo clan añadido");
 }
 
-module.exports.hasClan = async (userId, guildId) => {
+async function hasClan(userId, guildId) {
 	let result = await clanSchema.findOne({
 		guildId: guildId,
 		ownerId: userId
@@ -90,4 +90,6 @@ module.exports.hasClan = async (userId, guildId) => {
 	return hasClan
 }
 
+async function forceJoin(member, clan) {
 
+};

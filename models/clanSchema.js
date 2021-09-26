@@ -17,6 +17,11 @@ const clansSchema = new mongoose.Schema({
     background: {
         type: String,
         default: 'linkdelbgdefault.jpg'
+    },
+    money: {
+        type: Number,
+        required: true,
+        default: 0
     }
 })
 

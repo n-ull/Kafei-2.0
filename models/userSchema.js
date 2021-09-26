@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema({
         min: 0,
         required: true
     },
+    bank: {
+        type: Number,
+        default: 0,
+        min: 0,
+        required: true
+    },
     medals: [String]
 })
 

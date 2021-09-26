@@ -33,6 +33,7 @@ client.on('ready', () => {
     .setDefaultPrefix('-')
     .setColor(0xff0000)
     .setMongoPath(process.env.MONGO)
+    .setBotOwner(['244535132097216512', '340664343853006849'])
 })
 
 client.login(process.env.TOKEN)

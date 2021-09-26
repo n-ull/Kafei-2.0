@@ -4,8 +4,8 @@ const { MessageActionRow, MessageEmbed, MessageButton } = require('discord.js')
 let using = new Set();
 
 module.exports = {
-	name: 'buy',
-	description: 'Compra un clan, por el accesible precio de tu alma.',
+	name: 'buyclan',
+	description: 'Compra un clan, por el accesible precio de tu alma... Es broma, no aceptamos basura, crear un clan cuesta 1.500.000 Mons.',
 	category: 'Clans',
 	guildOnly: true,
 	callback: async ({ message }) => {
@@ -59,31 +59,46 @@ module.exports = {
 
 			btnCol.on('collect', async i => {
 				await i.deferUpdate();
-				if(i.customId == 'cancel'){
+				if (i.customId == 'cancel') {
+					step = 0
 					msgCol.stop();
 					btnCol.stop();
 				}
+
+				if(i.customId == 'accept'){
+					if(step == 4){
+						embedConfig.setTitle('Tu clan fue creado')
+						.setDescription(`
+						Felicidades, ahora eres dueño del clan ${clan.name}, te quitamos tu anterior clan y te dimos el tuyo, para ver las opciones del clan usa el comando: \`-configclan\`
+						`)
+						.setColor('GREEN');
+						clans.create(message.guild, message.member, clan)
+						config.edit({embeds: [embedConfig], components: []});
+						msgCol.stop();
+						btnCol.stop();
+					}
+				}
 			});
 
-			btnCol.on('end', () => {
-				config.edit({embeds: [    {
-					"title": "⚠  Creación de clanes cancelada...",
-					"description": "Vuelve cuando estés preparado, cobarde...",
-					"color": 15743803
-				  }], components: []})
+			btnCol.on('end', (c, r) => {
+				if(step == 0 || r == 'time') {
+					config.edit({
+						embeds: [ {
+							"title": "⚠  Creación de clanes cancelada...",
+							"description": "Vuelve cuando estés preparado, cobarde...",
+							"color": 15743803
+						} ], components: []
+					})
+				}
 				using.delete(message.author.id);
 			})
 
 			msgCol.on('collect', i => {
-				if (i.author.id !== message.author.id) {
-					console.log('Recibido mensaje de otro usuario')
-					return
-				}
-
+				if(i.author.id !== message.author.id) return;
 				switch (step) {
 					case 1:
 						if (i.content.length > 12) {
-							i.reply({ content: 'El nombre de tu clan no debe superar los 12 caracteres y no debe tener emojis', ephemeral: true });
+							i.reply({ content: 'El nombre de tu clan no debe superar los 12 caracteres y no debe tener emojis' });
 							msgCol.resetTimer()
 							return
 						}
@@ -96,11 +111,23 @@ module.exports = {
 						config.edit({ embeds: [ embedConfig ] });
 						break;
 					case 2:
+						clan.emoji = i.content;
 						step++;
-						console.log(i.content);
+						embedConfig.setTitle('(Paso 3) 🎌')
+							.setDescription(
+								`Perfecto, ahora envíame un color en hexadecimal o alguno de los siguientes: \`\`\`RED, BLUE, GREEN, PURPLE, BLURPLE, PINK, ORANGE, CYAN, GOLDEN, YELLOW, GRAY\`\`\`\n\n**Nombre del Clan:** \n> ${clan.name}\n\n**Icono**: \n> ${clan.emoji}\n\n**Color:** ◀\n> . . . .`
+							)
+						config.edit({ embeds: [ embedConfig ] })
 						break;
 					case 3:
-						console.log('Paso 3')
+						clan.color = i.content;
+						step++;
+						embedConfig.setTitle('¿Estás seguro?')
+						.setDescription(
+							`Estos son los datos que me enviaste, si estás seguro puedes aceptar y ya tendrás tu clan, y si no puedes cancelar y volver a intentarlo. Se puede cambiar luego de crear el clan, pero te costará unos Mons extra... así que piensa bien.\n\n**Nombre del Clan:** \n> ${clan.name}\n\n**Icono**: \n> ${clan.emoji}\n\n**Color:** \n> ${clan.color}`
+						);
+						accept.setDisabled(false);
+						config.edit({embeds: [embedConfig], components: [new MessageActionRow().addComponents([accept, cancel])]})
 						break;
 				}
 			});

@@ -10,6 +10,10 @@ module.exports = {
 	guildOnly: true,
 	callback: async ({ message }) => {
 	let user = message.member;
-	message.channel.send(await clans.join(user, message.guildId));
+	try{
+		message.channel.send(await clans.join(user, message.guildId));
+	} catch (error) {
+		message.channel.send(error)
+	}
 	}
 }

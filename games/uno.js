@@ -1,95 +1,97 @@
-Array.prototype.shuffle = function () {
-	var i = this.length, j, temp;
-	if (i == 0) return this;
-	while (--i) {
-		j = Math.floor(Math.random() * (i + 1));
-		temp = this[ i ];
-		this[ i ] = this[ j ];
-		this[ j ] = temp;
+class Player {
+	constructor(id, index, game) {
+		this.id = id;
+		this.gameContext = game;
+		this.hand = [];
+		this.turn = index;
 	}
-	return this;
+
+	giveUp() {
+
+	}
+		
+	draw(q) {
+		this.hand.push(...this.gameContext.draw(q))
+	}
+
+	jugada() {
+		if (this.turn == this.gameContext.turn) {
+			// Si es tu turno, pelotudo
+		} else {
+			// No es tu turno, pelotudo
+		}
+
+	}
 }
 
-class Uno {
-	constructor(players) {
-		this.result = 'None';
-		this.players = players;
-		this.deck = Array.from(Array(108), (_, x) => x).shuffle();
+class Game {
+	constructor() {
+		this.players = new Array();
+		this.running = false;
+		this.turn = 0;
+		this.deck = this.shuffle(Array.from(Array(108), (_, x) => x));
 		this.drawcard;
-		this.graveyard = [];
+		this.graveyard;
+		this.orientation = 1 // -1 orientación caNbiada
 	}
 
-	draw(p, q = 1) {
+	join() {
+		if (this.running) this.error("GAME_RUNNING");
+		if (this.players > this.maxPlayers) this.error("USERS_EXCEED");
+		this.players.push(new Player("id", this.players.length, this));
+	}
+
+	/*
+	*	@params {
+	*		q = Quantity
+	*	}
+	*/
+	draw(q = 1) {
+		let result = [];
 		if (q > this.deck.length) {
 			this.deck.push(this.graveyard.pop(this.graveyard.length)).shuffle();
 		}
 
 		for (let cards = 0; cards < q; cards++) {
 			let drawed = this.deck.pop();
-			this.players[ p ].hand.push(drawed)
+			result.push(drawed);
 		}
 
-		return this
+		return result
+	}
+
+	shuffle(deck) {
+		var i = deck.length, j, temp;
+		if (i == 0) return deck;
+		while (--i) {
+			j = Math.floor(Math.random() * (i + 1));
+			temp = deck[ i ];
+			deck[ i ] = deck[ j ];
+			deck[ j ] = temp;
+		}
+		return deck;
 	}
 
 	deal() {
-		for (let index = 0; index < this.players.length; index++) {
-			const player = this.players[ index ];
-			this.draw(index, 7);
-		}
+		this.running = true;
+
+		this.players.forEach(player => {
+			player.draw(7)
+		});
 
 		this.drawcard = this.deck.pop();
 		return this
 	}
 
-	discard(card) {
-		let color = n => Math.floor(n / 25);
-		let value = n => n > 100 ? 'comodin' :
-			(n % 25) > 9 && (n % 25) < 18 ? (n % 25) - 9 : 'efecto';
-
-		if (color(card) !== color(this.drawcard) || value(card) !== value(drawcard)) {
-			// la carta lanzada no tiene el mismo color ni valor
-		}
+	discard() {
+		
 	}
 
-	evaluate(card) {
-		let number = (card % 25);
-		let result = {}
-		if (card > 100) {
-			// Joker
-			result = {
-				type: "effect",
-				color: null,
-				value: null,
-				effect: ()=>{
-
-				}
-			}
-		} else if (number > 17) {
-			// Effect
-		}
-		else if (number > 9) {
-			// Number 2nd Pair
-		} else {
-			// Number (0-9)
-			result = {
-				type: "normal",
-				value: number,
-				color: card / 25
-			}
-		}
-		return result;
+	error(message) {
+		console.log(message);
 	}
 }
 
-// Player Object
-let playing = [ {
-	id: "852739032923635773",
-	hand: []
-}, {
-	id: "244535132097216512",
-	hand: []
-} ]
-
-let game = new Uno(playing).deal();
-console.log(game)
+let gaming = new Game();
+gaming.join();
+gaming.deal();
