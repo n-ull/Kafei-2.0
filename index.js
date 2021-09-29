@@ -1,7 +1,11 @@
 require('dotenv').config();
-const DiscordJS = require('discord.js')
-const WOKCommands = require('wokcommands')
-const path = require('path')
+const DiscordJS = require('discord.js');
+const WOKCommands = require('wokcommands');
+const path = require('path');
+const readline = require('readline').createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
 const { Intents } = DiscordJS
 
@@ -26,6 +30,7 @@ client.on('ready', () => {
       useUnifiedTopology: true,
       useFindAndModify: false,
     },
+    testServers: '860280485817483264',
     disabledDefaultCommands: [
       'help'
     ]
@@ -33,7 +38,16 @@ client.on('ready', () => {
     .setDefaultPrefix('-')
     .setColor(0xff0000)
     .setMongoPath(process.env.MONGO)
-    .setBotOwner(['244535132097216512', '340664343853006849'])
+    .setBotOwner([ '244535132097216512', '340664343853006849' ]);
 })
 
+// readline.on('line', (input) => {
+//   try{
+//     console.log(eval(input))
+//   } catch (error){
+//     console.log(error)
+//   }
+// })
+
 client.login(process.env.TOKEN)
+

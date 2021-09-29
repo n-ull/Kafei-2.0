@@ -65,7 +65,7 @@ module.exports = {
 		// Build page
 		function buildPage(categoria, comandos, message) {
 			let list = [];
-			const eachCommand = comandos.forEach(element => {
+			const eachCommand = comandos.filter(comando => comando.hidden !== true).forEach(element => {
 				list.push(`\`${element.names[ 0 ]}\``)
 			});
 			const newPage = new MessageEmbed()

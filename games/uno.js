@@ -1,12 +1,15 @@
-let { Collection, MessageActionRow, MessageButton, MessageSelectMenu } = require('discord.js')
+let { Collection, MessageEmbed, MessageActionRow, MessageButton, MessageSelectMenu } = require('discord.js')
+let Emojis = require('./unoEmojis');
 
 class Player {
-	constructor(id, index, game) {
+	constructor(id, name, index, game) {
 		this.id = id;
+		this.name = name
 		this.gameContext = game;
 		this.hand = new Map();
 		this.position = index;
 	}
+
 
 	draw(q) {
 		let cards = this.gameContext.draw(q)
@@ -20,7 +23,7 @@ class Player {
 		return this.position == this.gameContext.turn;
 	}
 
-	play(on, card) {
+	play(on, card, param) {
 		if (this.position == this.gameContext.turn) {
 			switch (on) {
 				case 'draw':
@@ -30,8 +33,11 @@ class Player {
 				case 'drop':
 					let select = this.hand.get(card);
 					if (select == undefined) return this.gameContext.error('NOT_IN_HAND');
+					if (this.hand.size - 1 == 0) {
+						this.gameContext.finish();
+					}
 					this.hand.delete(card);
-					this.gameContext.use(select);
+					this.gameContext.use(select, param);
 					break;
 			}
 		} else {
@@ -39,10 +45,13 @@ class Player {
 		}
 	}
 
+	/**
+	 * @returns {Array} Every possible card to play
+	 */
 	getHand() {
-		let top = this.gameContext.graveyard[ this.gameContext.graveyard.length - 1 ];
+		let top = this.gameContext.last();
 		let cardsArray = Array.from(this.hand.values());
-		return cardsArray.filter(c => c.value == top.value || c.color == top.color || c.type == 'joker');
+		return cardsArray.filter(c => c.value == top.value || c.color == top.color || c.type == 'wild');
 	}
 }
 
@@ -50,25 +59,68 @@ class Card {
 	constructor(index) {
 		this.id = `🃏${index}`
 		if (index > 99) {
-			this.type = 'joker'
-			this.value = 'joker'
-			this.effectId = index % 2
+			this.type = 'wild';
+			this.color = 'W';
+			this.effectId = index % 2;
+			this.value = [ 'WILD+4', 'WILD' ][ this.effectId ];
 			return
 		}
 
 		if ((index % 25) >= 19) {
-			this.type = 'effect'
-			this.value = 'effect'
+			this.type = 'effect';
 			this.effectId = index % 3;
+			this.value = [ '+2', 'REVERSE', 'SKIP' ][ this.effectId ];
+			this.color = [ 'R', 'G', 'B', 'Y' ][ Math.floor(index / 25) ];
+			return
 		}
 
 		if ((index % 25) > 9 && (index % 25) < 19) {
-			this.value = (index % 25) - 9;
+			this.value = (index % 25) - 9 + '';
 		} else {
-			this.value = index % 25;
+			this.value = index % 25 + '';
 		}
 
-		this.color = Math.floor(index / 25);
+		this.color = [ 'R', 'G', 'B', 'Y' ][ Math.floor(index / 25) ];
+	}
+
+	wild() {
+		return this.type == 'wild' ? true : false
+	}
+
+	get emojiMap() {
+		return this.wild() ? this.value.replace('+', 'PLUS') : `${this.color + this.value.replace('+', 'PLUS')}`
+	}
+
+	get colorName() {
+		return {
+			R: 'Rojo',
+			Y: 'Amarillo',
+			G: 'Verde',
+			B: 'Azul'
+		}[ this.color ];
+	}
+
+	get colorCode() {
+		return {
+			R: 0xff5555,
+			Y: 0xffaa00,
+			G: 0x55aa55,
+			B: 0x5555ff
+		}[ this.color ] || 0x080808;
+	}
+
+	get colorEmoji() {
+		return {
+			R: '🔴',
+			Y: '🟡',
+			G: '🟢',
+			B: '🔵',
+			W: '🔳'
+		}[ this.color ]
+	}
+
+	get cardURL() {
+		return `https://raw.githubusercontent.com/Ratismal/UNO/master/cards/${this.wild() ? '' : this.color}${this.value}.png`;
 	}
 }
 
@@ -81,18 +133,18 @@ class Game {
 		this.maxPlayers = 8;
 		this.minPlayers = 0;
 		this.graveyard = [];
-		this.orientation = 1 // -1 orientación caNbiada
+		this.orientation = 1; // -1 orientación caNbiada
+		this.finished = false;
 	}
 
-	join(id) {
+	join(id, name) {
 		if (this.running) return this.error("GAME_RUNNING");
 		if (this.players.size == this.maxPlayers) return this.error("USERS_EXCEED");
 		if (this.players.has(id)) return this.error('ALREADY_JOINED');
-		this.players.set(id, new Player(id, this.players.size, this));
+		this.players.set(id, new Player(id, name, this.players.size, this));
 	}
 
-	/**
-	 * 
+	/** 
 	 * @param {number} q Cantidad de cartas a levantar
 	 * @returns {Array} Cartas levantadas
 	 */
@@ -132,7 +184,7 @@ class Game {
 		});
 
 		// Shuffle the cards until the last is not a joker
-		while (this.deck[ this.deck.length - 1 ].type == 'joker') {
+		while (this.deck[ this.deck.length - 1 ].type == 'wild') {
 			this.shuffle(this.deck);
 		}
 
@@ -143,12 +195,10 @@ class Game {
 	// jump a turn
 	nextTurn(know = false) {
 		let outOfBound = this.turn + this.orientation;
-		let next;
+		let next = 0;
 		if (outOfBound < 0) {
-			next = this.players.size
-		}
-
-		if (outOfBound > (this.players.size - 1)) {
+			next = this.players.size - 1
+		} else if (outOfBound > (this.players.size - 1)) {
 			next = 0
 		} else {
 			next = this.turn + this.orientation
@@ -170,14 +220,15 @@ class Game {
 	/**
 	 * 
 	 * @param {Object} card The Card Object after being evaluated.
-	 * @param {number} param The selected color (0/1/2/3)
+	 * @param {number} param The selected color (R/G/B/Y)
 	 */
-	use(card, param = 0) {
+	use(card, param = 'R') {
 		let target = this.players.find(p => p.position == this.nextTurn(true));
-		if (card.type == 'joker') {
+		if (card.type == 'wild') {
 			card.color = param;
 			switch (card.effectId) {
 				case 0:
+					this.nextTurn();
 					target.draw(4)
 					// sumar +4 al usuario del siguiente turno			
 					break;
@@ -185,18 +236,23 @@ class Game {
 		}
 
 		if (card.type == 'effect') {
+			// console.log(`Efecto activado: ${{ 0: '+2', 1: 'REV', 2: 'SKIP' }[ card.effectId ]}`);
 			switch (card.effectId) {
 				case 0:
 					target.draw(2)
+					this.nextTurn();
 					// sumar +2 al usuario del siguiente turno
 					break;
 				case 1:
-					this.nextTurn();
-					// adelantar un turno
+					if (this.orientation == 1) {
+						this.orientation = -1
+					} else {
+						this.orientation = 1
+					}
 					break;
 				case 2:
-					// alternar orientación
-					this.orientation = this.orientation == 1 ? -1 : 1;
+					this.nextTurn();
+					// saltar turno
 					break;
 			}
 		}
@@ -208,98 +264,236 @@ class Game {
 	error(message) {
 		console.log(message);
 	}
+
+	last() {
+		return this.graveyard[ this.graveyard.length - 1 ]
+	}
+
+	finish() {
+		this.finished = true;
+	}
 }
 
-module.exports = async (message, client) => {
+// Buttons and Menus
+let JoinButton = new MessageButton().setStyle('SUCCESS').setCustomId('join').setLabel('Join');
+let StartButton = new MessageButton().setStyle('SECONDARY').setCustomId('start').setLabel('Start');
+let MainMenu = new MessageActionRow().addComponents(JoinButton, StartButton);
+
+let HandButton = new MessageButton().setStyle('SECONDARY').setCustomId('hand').setLabel('Hand');
+let gameOptions = new MessageActionRow().addComponents(HandButton);
+
+let RED = new MessageButton().setStyle('SECONDARY').setCustomId('R').setEmoji('🔴')
+let GREEN = new MessageButton().setStyle('SECONDARY').setCustomId('G').setEmoji('🟢')
+let YELLOW = new MessageButton().setStyle('SECONDARY').setCustomId('Y').setEmoji('🟡')
+let BLUE = new MessageButton().setStyle('SECONDARY').setCustomId('B').setEmoji('🔵')
+let WildMenu = new MessageActionRow().addComponents(RED, BLUE, YELLOW, GREEN);
+
+//@TODO: No se puede ganar con cartas de efecto!
+
+module.exports = async (message) => {
+	let EmojiMap = Emojis(message.client);
+	// Embeds
+	let InitialEmbed = new MessageEmbed()
+		.setAuthor('UNO!', 'https://cdn.discordapp.com/avatars/403419413904228352/23d64a552dd7984cd1163afcc75ce297.webp?size=128')
+		.setTitle('¡Unete a la partida!')
+		.setFooter('Reglas del juego');
+	let PlayingEmbed = new MessageEmbed()
+		.setAuthor('UNO!', 'https://cdn.discordapp.com/avatars/403419413904228352/23d64a552dd7984cd1163afcc75ce297.webp?size=128');
+	let ScoreEmbed = new MessageEmbed()
+		.setTitle('¡El juego terminó!');
+
+	function updateEmbed(action, embed, info, played) {
+		// let playerlist = Array.from(info.players.values());
+		let step1 = info.players.mapValues(p => p);
+		let step2 = Array.from(step1.values());
+		let playerlist = [];
+		let turns = [];
+		step2.forEach(p => playerlist.push(`- ${p.name}\n`));
+		step2.forEach(p => {
+			if (p.turn()) {
+				turns.push(`# ${p.name} (${p.hand.size} cartas)\n`);
+			} else {
+				turns.push(`- ${p.name} (${p.hand.size} cartas)\n`);
+			}
+		});
+		let playmsg = [ 'lanzó una carta', 'levantó una carta', 'levantó una carta y la lanzó' ]
+
+		if (action == 'join') {
+			embed.setDescription(`Presiona el botón \`Join\` para ingresar a la partida.\n
+	[ **Jugadores** ]\n\`\`\`md\n${playerlist.join('')}\`\`\``);
+		}
+
+		if (action == 'play') {
+			// ? playerlist.push(`# ${p.name}\n`) : playerlist.push(`- ${p.name}`
+			embed.setTitle(`Última carta tirada: ${info.last().value}  ${info.last().colorName}`)
+				.setDescription(`
+	El jugador <@${played.id}> ${playmsg[ played.m ]}.\n
+	[ **Jugadores** ]\n\`\`\`md\n${turns.join('')}\`\`\`
+	`)
+				.setColor(info.last().colorCode)
+				.setThumbnail(info.last().cardURL);
+		}
+
+		if (action == 'start') {
+			embed.setTitle(`La primera carta es: ${info.last().value} ${info.last().colorName}`)
+				.setDescription(`
+	Empezó el juego, es hora de sufrir!.\n
+	[ **Jugadores** ]\n\`\`\`md\n${turns.join('')}\`\`\`
+	`)
+				.setColor(info.last().colorCode)
+				.setThumbnail(info.last().cardURL);
+		}
+
+		if (action == 'finish') {
+			embed.setDescription(`Acaba de ganar <@${played.id}>`)
+				.setThumbnail(info.last().cardURL)
+				.setColor(info.last().colorCode);
+		}
+	};
+
+	// Initialize all the utils and the game
 	let game = new Game();
-	
-	let joinbutton = new MessageButton()
-		.setCustomId('JOIN')
-		.setLabel('Join UNO!')
-		.setStyle('PRIMARY');
+	let cacheCard;
 
-	let start = new MessageButton()
-		.setCustomId('START')
-		.setLabel('Start')
-		.setStyle('SECONDARY');
+	game.join(message.author.id, message.author.username)
+	updateEmbed('join', InitialEmbed, game);
 
-	let hand = new MessageButton()
-		.setCustomId('HAND')
-		.setLabel('Hand')
-		.setStyle('SECONDARY');
+	// Send the first message and listen to join and start
+	let thread = await message.startThread({ name: 'UNO! [001]', autoArchiveDuration: 60 });
+	let stepOne = await thread.send({ embeds: [ InitialEmbed ], components: [ MainMenu ] });
+	let filter2 = i => i.channel.id == thread.id;
+	let firstCol = stepOne.channel.createMessageComponentCollector({ filter2 });
 
-	let join = new MessageActionRow().addComponents(joinbutton, start);
-	let options = new MessageActionRow().addComponents(hand)
 
-	let Init = await message.channel.send({ content: 'Join the game!', components: [ join ] });
-	Init.startThread({ name: `Partida de UNO! #${game.id}`, autoArchiveDuration: 60, reason: `Partida iniciada por ${message.author.tag}` })
-
-	client.on('interactionCreate', async interaction => {
-		if (interaction.channelId == thread.id) {
-			if (interaction.customId == 'JOIN') {
-				await interaction.deferReply({ ephemeral: true });
-				if (playing.has(interaction.user.id)) return interaction.editReply('Ya ingresaste a la partida')
-				game.join(interaction.user.id);
-				playing.add(interaction.user.id);
-				interaction.editReply('Ingresaste a la partida');
+	firstCol.on('collect', async option => {
+		if (!game.players.has(option.user.id) && game.running) return;
+		try {
+			if (option.customId == 'join') {
+				await option.deferUpdate();
+				game.join(option.user.id, option.user.username);
+				updateEmbed('join', InitialEmbed, game)
+				stepOne.edit({ embeds: [ InitialEmbed ] })
 			}
-			if (interaction.customId == 'START') {
-				await interaction.deferReply({ ephemeral: true });
-				interaction.editReply('Presiona `Mano` para ver tus opciones.');
+
+			if (option.customId == 'start') {
+				await option.deferUpdate();
 				game.deal();
-				thread.send({ content: `El juego comenzó con un ${game.graveyard[ game.graveyard.length - 1 ].value}`, components: [ options ] })
+				updateEmbed('start', PlayingEmbed, game)
+				stepOne.edit({ embeds: [ PlayingEmbed ], components: [ gameOptions ] });
 			}
-			if (interaction.customId == 'HAND') {
-				let player = game.players.get(interaction.user.id);
-				await interaction.deferReply({ ephemeral: true });
-				// Hand Menu Options
-				let avaliableCards = new MessageSelectMenu()
-					.setCustomId('PLAY')
-					.addOptions({
-						label: 'Draw',
-						description: 'Draw a card.',
-						value: 'draw',
-						emoji: '🎴'
-					})
-					.setPlaceholder('¿Qué harás?');
 
-				let manita = player.getHand();
-				manita.forEach(card => {
-					avaliableCards.addOptions({
-						label: 'Carta',
-						description: `Valor: ${card.value}`,
-						value: `${card.id}`,
-						emoji: '890649044144255038'
+			if (option.customId == 'hand' && !game.players.get(option.user.id).turn()) {
+				function getFullHand(id) {
+					let fullhand = [];
+					game.players.get(id).hand.forEach(c => {
+						// console.log(c.emojiMap)
+						fullhand.push(EmojiMap.find(e => e.name == c.emojiMap));
+					})
+					return !fullhand ? '[Sin cartas]' : fullhand.join(' ')
+				}
+
+				await option.deferReply({ ephemeral: true });
+				option.editReply({ content: `${getFullHand(option.user.id)}`, ephemeral: true });
+				return
+			}
+
+			if (option.customId == 'hand' && game.players.get(option.user.id).turn()) {
+				let player = game.players.get(option.user.id);
+				let filter = i => i.user.id == player.id;
+				await option.deferReply({ ephemeral: true });
+
+				// Create turn hand
+				let possible = player.getHand();
+
+				let HandCards = new MessageSelectMenu().setCustomId('play').setPlaceholder('Selecciona qué carta tirar...').addOptions({
+					label: 'Levantar carta',
+					description: 'Levanta una carta y pasa turno (tirala de ser posible)',
+					value: 'draw',
+					emoji: '🎴'
+				});
+				let HandMenu = new MessageActionRow();
+
+				possible.forEach(card => {
+					HandCards.addOptions({
+						label: `${card.value}`,
+						description: `Lanza esta carta, está disponible!`,
+						value: card.id,
+						emoji: card.colorEmoji
 					})
 				})
 
-
-				if (!player.turn()) {
-					avaliableCards.setPlaceholder('No es tu turno.')
-					avaliableCards.setDisabled(true)
+				function getFullHand(player) {
+					let fullhand = [];
+					player.hand.forEach(c => {
+						// console.log(c.emojiMap)
+						fullhand.push(EmojiMap.find(e => e.name == c.emojiMap));
+					})
+					return !fullhand ? '[Sin cartas]' : fullhand.join(' ')
 				}
 
-				let handMenu = new MessageActionRow().addComponents(avaliableCards);
+				HandMenu.addComponents(HandCards);
+				option.editReply({ content: `${getFullHand(player)}`, ephemeral: true, components: [ HandMenu ] });
 
-				interaction.editReply({ content: 'Tu mano es... ', components: [ handMenu ] });
+				// Collect player selection
+				let secCol = option.channel.createMessageComponentCollector({ filter, time: 30000 });
+				secCol.on('collect', async selection => {
+					if (!player.turn()) return selection.reply({ content: '¡No puedes enviar cartas si no es tu turno!', ephemeral: true });
+
+					if (selection.customId == 'hand') {
+						secCol.stop()
+						option.editReply({ content: 'Volviste a tocar Hand', ephemeral: true, components: [], embeds: [] });
+						return
+					}
+					selection.deferUpdate();
+					if (selection.customId == 'R' || selection.customId == 'B' || selection.customId == 'Y' || selection.customId == 'G') {
+						player.play('drop', cacheCard, selection.customId);
+
+						option.editReply({ content: `${getFullHand(player)}`, ephemeral: true, components: [] });
+						updateEmbed('play', PlayingEmbed, game, { id: option.user.id, m: 0 });
+						stepOne.channel.send({ embeds: [ PlayingEmbed ], components: [ gameOptions ] });
+						secCol.stop();
+						return
+					}
+
+					if (selection.values == 'draw') {
+						player.play('draw');
+
+						option.editReply({ content: `${getFullHand(player)}`, ephemeral: true, components: [] });
+						updateEmbed('play', PlayingEmbed, game, { id: option.user.id, m: 1 });
+						stepOne.channel.send({ embeds: [ PlayingEmbed ], components: [ gameOptions ] });
+					}
+
+					if (selection.values.join().startsWith('🃏')) {
+						if (player.hand.get(selection.values[ 0 ]).wild()) {
+							cacheCard = selection.values[ 0 ];
+							option.editReply({ content: `¿Qué color quieres?`, ephemeral: true, components: [ WildMenu ] })
+							return
+						} else {
+							player.play('drop', selection.values[ 0 ])
+
+						}
+						if (game.finished) {
+							updateEmbed('finish', ScoreEmbed, game, { id: option.user.id });
+							thread.parent.send({ embeds: [ ScoreEmbed ], components: [] })
+							thread.delete();
+							firstCol.stop();
+							return
+						}
+						option.editReply({ content: `${getFullHand(player)}`, ephemeral: true, components: [] });
+						updateEmbed('play', PlayingEmbed, game, { id: option.user.id, m: 0 });
+						stepOne.channel.send({ embeds: [ PlayingEmbed ], components: [ gameOptions ] });
+					}
+					secCol.stop();
+				})
+
 			}
-			if (interaction.customId == 'PLAY') {
-				let player = game.players.get(interaction.user.id);
-				await interaction.deferReply({ephemeral: true});
-				if(!player.turn()) return interaction.editReply('¡No es tu turno!');
 
-				if (interaction.values.filter(a => a.startsWith('🃏')).length) {
-					// @todo: if player send a card he doesn't has return error message reply.
-					player.play('drop', interaction.values[ 0 ]);
-					thread.send({ content: `La nueva carta es ${game.graveyard[ game.graveyard.length - 1 ].value}`, components: [options] })
-					interaction.editReply({ content: "Tienes una nueva mano", components: [] });
-				}
+			firstCol.on('end', (_, r) => {
 
-				if (interaction.values == 'draw') {
-					player.play('draw');
-					interaction.editReply({ content: "Tienes una nueva mano", components: [] });
-				}
-			}
+			})
+		}
+		catch (err) {
+			console.log(err);
 		}
 	})
 }

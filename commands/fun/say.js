@@ -3,26 +3,42 @@ module.exports = {
 	name: 'say',
 	description: 'Haz que el bot diga algo.',
 	category: 'Fun',
-	expectedArgs: '< normal/reply > *message-id*; < texto >',
-	callback: async ({ message, args, text }) => {
-		// modo normal
-		if (args[ 0 ].slice(0, 6) == 'normal') {
-			let say = text.split('; ');
-			await message.channel.send(say[ 1 ]);
-			message.delete();
+	testOnly: true,
+	slash: true,
+	hidden: true,
+	options: [
+		{
+			name: 'message', // Must be lower case
+			description: 'El mensaje que debo decir.',
+			required: true,
+			type: 3, // This argument is a string
+		},
+		{
+			name: 'reply', // Must be lower case
+			description: 'Si es una respuesta escribir el id del mensaje a responder',
+			required: false,
+			type: 3, // This argument is a string
 		}
-
-		// modo respuesta
-		if (args[ 0 ] == 'reply') {
+	],
+	expectedArgs: '<mensaje> <id del mensaje a responder>',
+	callback: async ({ interaction, args }) => {
+		const message = args[ 0 ];
+		const msgid = args[ 1 ];
+		if(!msgid){
+			interaction.channel.send(message);
+		} else {
 			try {
-				let messageId = args[ 1 ].replace(/;/, '');
-				let toreply = await message.channel.messages.fetch(messageId);
-				let say = text.split('; ');
-				toreply.reply(say[ 1 ])
-				message.delete();
-			} catch (e) {
-				message.channel.send('No encontré ese mensaje en este canal...')
+				const target = await interaction.channel.messages.fetch(msgid);
+				target.reply({content: message, allowedMentions: {repliedUser: false}})
+			} catch(err) {
+				console.log(err);
+				interaction.channel.send(message);
 			}
-		}
+		};
+
+		interaction.reply({
+			content: '¡Mensaje enviado!',
+			ephemeral: true
+		})
 	}
 }
